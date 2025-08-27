@@ -56,7 +56,7 @@ jobs:
           version: latest
           use-tool-cache: true
       - name: Audit
-        run: cargo audit --deny warnings
+        run: cargo audit --deny vulnerabilities
 
   build-and-test:
     strategy:
