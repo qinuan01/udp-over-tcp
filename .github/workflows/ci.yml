@@ -1,64 +1,33 @@
-name: Build & Release udp-over-tcp
+name: Build udp-over-tcp binaries
 
 on:
   push:
     tags:
-      - 'v*'   # 只有打 tag 时触发构建
+      - 'v*'   # 只有打 tag 时触发构建（比如 v1.0.0）
   workflow_dispatch:   # 手动触发
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest]
         target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu]
 
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          target: ${{ matrix.target }}
-          default: true
+          targets: ${{ matrix.target }}
 
-      - name: Patch crossbeam-channel to safe version
-        run: |
-          echo '[patch.crates-io]' >> Cargo.toml
-          echo 'crossbeam-channel = "0.5.15"' >> Cargo.toml
-
-      - name: Build release
+      - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: udp-over-tcp-${{ matrix.target }}
+          name: udp-over-tcp-${{ matrix.os }}-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/*
-          
-  release:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./artifacts
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ./artifacts/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
